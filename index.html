@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Sign Language Translator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-family: 'Outfit', sans-serif;
+            background: #0b1121;
+            /* Dark Navy/Teal base */
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ... (Background animation styles omitted for brevity, keeping existing) ... */
+
+        /* Header - Make it bolder */
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            /* ... (keep gradient) ... */
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+
+        /* Prediction Char - Huge */
+        .prediction-char {
+            font-size: 4rem;
+            font-weight: 800;
+        }
+
+        /* Top Predictions Cards */
+        .prediction-char-label {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .prediction-conf-label {
+            font-family: 'Outfit', sans-serif;
+            /* Ensure badge uses new font */
+        }
+
+        /* Suggestions */
+        .suggestion-badge {
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 12px 20px;
+        }
+
+        /* Buffer Display - Larger */
+        .buffer-display {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            min-height: 100px;
+            letter-spacing: 2px;
+        }
+
+        /* Sentence Display - Readable */
+        .sentence-display {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 500;
+            line-height: 1.6;
+            min-height: 140px;
+            padding: 30px;
+        }
+
+        /* Buttons */
+        .btn-custom {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            z-index: 0;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            /* Radial Gradient */
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(#06b6d4 1px, transparent 1px),
+                linear-gradient(90deg, #06b6d4 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.05;
+            animation: moveGrid 20s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            margin: 0 auto;
+            height: 100vh;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            animation: fadeInDown 0.8s ease;
+            text-align: left;
+            position: relative;
+        }
+
+        #speech-btn-container {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-learn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 50px;
+            border: none;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-learn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+        }
+
+        /* Learning Mode UI */
+        #learning-panel {
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .target-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            padding: 40px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .target-letter {
+            font-size: 8rem;
+            font-weight: 800;
+            background: linear-gradient(to bottom, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .target-instruction {
+            font-size: 1.5rem;
+            color: #a5b4fc;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .score-board {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #6ee7b7;
+        }
+
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -1.5px;
+        }
+
+        .header-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        /* Layout */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            animation: fadeInUp 0.8s ease;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            /* Darker glass */
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            /* sharper corners */
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            /* Cyan border */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.3);
+        }
+
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            z-index: 2;
+        }
+
+        .video-controls-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .video-controls-overlay {
+            opacity: 1;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .btn-danger-icon {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .btn-danger-icon:hover {
+            background: rgba(239, 68, 68, 0.4);
+            color: white;
+        }
+
+        /* Video Section */
+        .video-section {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            flex: 1 1 auto;
+            min-height: 0;
+            aspect-ratio: 4/3;
+            /* Reserve space to prevent layout shift */
+        }
+
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 20px;
+            object-fit: contain;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.1);
+            }
+        }
+
+        .fps-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 50px;
+            color: #a5b4fc;
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Split Widget Layout */
+        .confidence-split-widget {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+        }
+
+        .confidence-donut {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .confidence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sidebar-panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+            /* Increased gap for cleaner separation */
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .sidebar-section {
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-section:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title i {
+            color: #818cf8;
+            font-size: 1.05rem;
+        }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title i {
+            color: #818cf8;
+            font-size: 1.2rem;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Prediction Display - Circular Meter */
+        .prediction-display {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 20px;
+            padding: 15px;
+            /* Reduced from 30px */
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .circular-meter {
+            position: relative;
+            width: 120px;
+            /* Reduced from 180px */
+            height: 120px;
+        }
+
+        .circle-chart {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 8;
+        }
+
+        .circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke: url(#gradient);
+            transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 0 4px rgba(129, 140, 248, 0.4));
+        }
+
+        .meter-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            text-align: center;
+        }
+
+        .prediction-char {
+            font-size: 3.5rem;
+            /* Reduced from 4.5rem */
+            font-weight: 800;
+            color: #fff;
+            margin: 0;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(129, 140, 248, 0.5);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .confidence-text {
+            font-size: 1rem;
+            color: #a5b4fc;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        /* Top Predictions Enhanced */
+        .prediction-card {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prediction-card:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateX(5px);
+        }
+
+        .rank-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 15px;
+            flex-shrink: 0;
+            color: #1e1b4b;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+            box-shadow: 0 0 10px rgba(156, 163, 175, 0.4);
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #b45309, #78350f);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(180, 83, 9, 0.4);
+        }
+
+        .prediction-info {
+            flex-grow: 1;
+        }
+
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .prediction-char-label {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #fff;
+        }
+
+        .prediction-conf-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(99, 102, 241, 0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(129, 140, 248, 0.3);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .conf-high {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+
+        .conf-mid {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #fcd34d;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+        }
+
+        /* Top Predictions Items */
+        .prediction-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .prediction-item:hover {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.3);
+            transform: translateX(2px);
+        }
+
+        .pred-rank {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            background: rgba(255, 255, 255, 0.05);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .pred-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .pred-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .pred-char {
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .pred-percent {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .pred-bar-bg {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .pred-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #06b6d4, #3b82f6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .prediction-mini-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .prediction-mini-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #818cf8, #6366f1);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Suggestions */
+        .suggestions-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 80px;
+            /* Reduced from 120px */
+            /* Fixed height to prevent jumping */
+            align-content: flex-start;
+            /* Ensure items start at top */
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-badge {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .suggestion-badge:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+        }
+
+        .suggestion-badge:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        /* Buffer Display */
+        .buffer-display {
+            font-family: 'Outfit', sans-serif;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 10px;
+            /* Reduced padding */
+            border-radius: 16px;
+            font-size: 2rem;
+            /* Slightly smaller font */
+            font-weight: 700;
+            text-align: center;
+            color: #818cf8;
+            min-height: 60px;
+            /* Reduced min-height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(129, 140, 248, 0.5);
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .buffer-display:not(:empty) {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #818cf8;
+        }
+
+        /* Sentence Display */
+        .sentence-display {
+            font-family: 'Outfit', sans-serif;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            /* Reduced padding */
+            border-radius: 16px;
+            min-height: 80px;
+            /* Reduced min-height */
+            font-size: 1.4rem;
+            font-weight: 500;
+            line-height: 1.6;
+            color: #e0e7ff;
+            word-wrap: break-word;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-custom {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            /* Larger icon */
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-custom::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-custom:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-custom span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary-custom {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-secondary-custom:hover {
+            background: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-warning-custom {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Empty State */
+        .empty-state {
+            color: #64748b;
+            font-style: italic;
+            text-align: center;
+            padding: 30px 20px;
+            opacity: 0.7;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .prediction-char {
+                font-size: 3.5rem;
+            }
+
+            .buffer-display {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Toggle Slider Navigation */
+        .nav-toggle-container {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 5px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-toggle-btn {
+            padding: 10px 25px;
+            border-radius: 40px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-toggle-btn.active {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .nav-slider-bg {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            height: calc(100% - 10px);
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            border-radius: 40px;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 0;
+            box-shadow: 0 2px 10px rgba(6, 182, 212, 0.3);
+        }
+
+        /* Mode Containers */
+        .mode-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .mode-container.active {
+            display: flex;
+            /* or block based on need, but flex works for content-wrapper replacement */
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading State */
+        .loading-pulse {
+            animation: loadingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadingPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="main-container">
+
+        <!-- Action Feedback Overlay -->
+        <div id="actionOverlay" class="action-overlay">
+            <i id="actionIcon" class="fas fa-clock action-icon"></i>
+            <div id="actionText" class="action-text">TIME</div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <i class="fas fa-hand-sparkles header-icon text-info"></i>
+            <div>
+                <h1>Digital Sign Language Translator <span style="font-weight: 300; opacity: 0.5;">AI</span></h1>
+                <p>Real-time ASL Detection & Translation</p>
+            </div>
+
+            <!-- Slider Navigation -->
+            <div class="nav-toggle-container">
+                <div id="navSliderBg" class="nav-slider-bg" style="width: 155px; transform: translateX(0px);"></div>
+                <button class="nav-toggle-btn active" onclick="switchMode('sign')" id="btn-sign">
+                    <i class="fas fa-video"></i> Sign Detection
+                </button>
+                <button class="nav-toggle-btn" onclick="switchMode('speak')" id="btn-speak">
+                    <i class="fas fa-microphone"></i> Speak to Sign
+                </button>
+            </div>
+            <!-- Practice Mode Button (Beside Toggle) -->
+            <div style="margin-left: 20px;">
+                <button class="btn-learn" onclick="toggleLearningMode()">
+                    <i class="fas fa-graduation-cap"></i> Practice Mode
+                </button>
+            </div>
+        </div>
+
+
+        <!-- LEARNING MODE PANEL -->
+        <div id="learning-panel">
+            <!-- Left: Game Area -->
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="score-board">
+                    Score: <span id="score-display">0</span>
+                </div>
+                <div class="target-card">
+                    <h2 class="target-letter" id="target-letter">A</h2>
+                    <div class="target-instruction">Sign the letter above</div>
+                </div>
+                <div id="feedback-msg" style="height: 30px; font-weight: bold; color: #4ade80; font-size: 1.2rem;">
+                </div>
+            </div>
+
+            <!-- Right: Stats Area -->
+            <div class="glass-card"
+                style="width: 300px; margin-left: 20px; padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+                <h3 class="section-title" style="text-align: center;">SESSION STATS</h3>
+
+                <!-- Accuracy Chart -->
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+
+                <!-- Progress Chart -->
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode: Sign Detection (Default) -->
+        <div id="mode-sign" class="mode-container active content-wrapper">
+            <!-- Video Section -->
+            <div class="video-section glass-card">
+                <div class="video-container">
+                    <img id="videoFeed" class="video-feed" src="/video_feed" alt="Video Feed">
+                    <div id="cameraPlaceholder" class="video-placeholder" style="display: none;">
+                        <i class="fas fa-video-slash" style="font-size: 3rem; color: #64748b; margin-bottom: 10px;"></i>
+                        <div style="color: #94a3b8; font-weight: 600;">Camera is Off</div>
+                    </div>
+                    <div class="video-overlay">
+                        <span class="status-dot"></span>
+                        <span style="font-weight: 600; font-size: 0.9rem;">Live</span>
+                    </div>
+                    <div class="fps-display">
+                        <i class="fas fa-bolt" style="font-size: 0.8rem; color: #fbbf24;"></i>
+                        <span id="fpsCounter">FPS: 0</span>
+                    </div>
+                    <div class="video-controls-overlay">
+                        <button onclick="startCamera()" class="btn-icon" title="Start Camera"><i
+                                class="fas fa-video"></i></button>
+                        <button onclick="stopCamera()" class="btn-icon btn-danger-icon" title="Stop Camera"><i
+                                class="fas fa-stop"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="glass-card sidebar-panel">
+                    <!-- Confidence Widget Split -->
+                    <div>
+                        <div class="section-title">CONFIDENCE WIDGET</div>
+                        <div class="confidence-split-widget">
+                            <div class="confidence-donut">
+                                <div class="circular-meter">
+                                    <svg class="circle-chart" viewBox="0 0 100 100">
+                                        <defs>
+                                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stop-color="#06b6d4" />
+                                                <stop offset="100%" stop-color="#3b82f6" />
+                                            </linearGradient>
+                                        </defs>
+                                        <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                        <circle class="circle" id="confidenceCircle" cx="50" cy="50" r="45"
+                                            stroke-dasharray="283" stroke-dashoffset="283" />
+                                    </svg>
+                                    <div class="meter-content">
+                                        <div id="predictedChar"
+                                            style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: #fff; margin-bottom: 2px;">
+                                            -</div>
+                                        <div class="confidence-text" id="confidenceText"
+                                            style="font-size: 1rem; color: #06b6d4; font-weight: 700;">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="confidence-list">
+                                <div
+                                    style="font-size: 1.1rem; color: #e2e8f0; font-weight: 700; margin-bottom: 8px; display: flex; justify-content: space-between; letter-spacing: 0.5px;">
+                                    <span>TOP PREDICTIONS</span>
+                                </div>
+                                <div id="topPredictions" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="empty-state" style="padding: 10px 0; font-size: 0.8rem;">Waiting...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Word Suggestions -->
+                    <div>
+                        <div class="section-title">WORD SUGGESTIONS</div>
+                        <div class="suggestions-container" id="suggestions"
+                            style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 15px;">
+                            <div class="empty-state" style="font-size: 0.9rem;">NO SUGGESTIONS AVAILABLE</div>
+                        </div>
+                    </div>
+
+                    <!-- Current Buffer -->
+                    <div>
+                        <div class="section-title">CURRENT BUFFER</div>
+                        <div class="buffer-display" id="buffer"
+                            style="border: 2px dashed #06b6d4; color: #fff; background: rgba(15, 23, 42, 0.5);">
+                            <span style="opacity: 0.5; font-size: 1.5rem;">THIS _____</span>
+                        </div>
+                    </div>
+
+                    <!-- Translated Sentence + Translation -->
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 15px;">
+
+                        <!-- Original Sentence -->
+                        <div>
+                            <div class="section-title">FINAL SENTENCE</div>
+                            <div class="sentence-display" id="sentence"
+                                style="background: rgba(255, 255, 255, 0.05); color: #fff; font-weight: 500; min-height: 60px; font-size: 1.2rem;">
+                                THIS IS A TEST SENTENCE.
+                            </div>
+                        </div>
+
+                        <!-- Translation Output -->
+                        <div>
+                            <div class="section-title"
+                                style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span>TRANSLATION</span>
+                                    <button onclick="speakTranslation()" class="btn-icon"
+                                        style="width: 28px; height: 28px; font-size: 0.8rem; background: rgba(6, 182, 212, 0.2); color: #67e8f9;"
+                                        title="Speak Translation">
+                                        <i class="fas fa-volume-up"></i>
+                                    </button>
+                                </div>
+                                <select id="languageSelect" onchange="translateText()"
+                                    style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 2px 8px; font-family: inherit; font-size: 0.9rem;">
+                                    <option value="hi">Hindi</option>
+                                    <option value="gu">Gujarati</option>
+                                    <option value="mr">Marathi</option>
+                                    <option value="bn">Bengali</option>
+                                    <option value="ta">Tamil</option>
+                                    <option value="te">Telugu</option>
+                                    <option value="kn">Kannada</option>
+                                    <option value="ml">Malayalam</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="ja">Japanese</option>
+                                </select>
+                            </div>
+                            <div class="sentence-display" id="translationDisplay"
+                                style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.1)); color: #67e8f9; font-weight: 600; min-height: 80px; border: 1px solid rgba(6, 182, 212, 0.3);">
+                                Select language to translate...
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="controls" style="margin-top: auto; padding-top: 15px;">
+                            <button class="btn-custom" style="background: #a855f7; color: white;" onclick="speak()"
+                                title="Speak">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="btn-custom" style="background: #3b82f6; color: white;" onclick="addSpace()"
+                                title="Space">
+                                <i class="fas fa-space-shuttle"></i>
+                            </button>
+                            <button class="btn-custom" style="background: #f97316; color: white;"
+                                onclick="clearSentence()" title="Clear">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="btn-custom" style="background: #ef4444; color: white;" onclick="backspace()"
+                                title="Backspace">
+                                <i class="fas fa-backspace"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode: Speak to Sign -->
+        <div id="mode-speak" class="mode-container glass-card"
+            style="padding: 40px; text-align: center; flex-direction: column; justify-content: center; align-items: center; position: relative;">
+
+            <div class="text-center w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                <div class="mb-4">
+                    <button id="start-speak-btn"
+                        class="btn btn-info rounded-pill px-5 py-3 shadow-lg fw-bold text-white d-flex align-items-center gap-3"
+                        style="font-size: 1.5rem; transition: transform 0.2s;" onclick="startSpeechToSign()">
+                        <i class="fas fa-microphone fa-lg"></i>
+                        <span>Tap to Speak</span>
+                    </button>
+                </div>
+
+                <div id="gif-container" class="position-relative mb-4"
+                    style="height: 600px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                    <img id="isl-gif-display" src="" alt="ISL Sign"
+                        class="img-fluid rounded-4 shadow-lg border border-info"
+                        style="max-height: 100%; max-width: 100%; object-fit: contain; display: none; box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);">
+
+                    <!-- Placeholder when no GIF is playing -->
+                    <div id="gif-placeholder" style="color: rgba(255,255,255,0.2); font-size: 8rem;">
+                        <i class="fas fa-hands-asl-interpreting"></i>
+                        <p style="font-size: 1.5rem; margin-top: 30px;">Signs will appear here</p>
+                    </div>
+                </div>
+
+                <h2 id="isl-word-display" class="text-white display-3 fw-bold mt-4"
+                    style="letter-spacing: 3px; text-shadow: 0 0 20px rgba(6, 182, 212, 0.5); min-height: 80px;"></h2>
+                <p id="isl-status" class="text-secondary mt-2 text-uppercase fs-5" style="letter-spacing: 2px;">
+                    Ready to Listen</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Interaction Flag (Optimistic UI)
+        let isInteracting = false;
+        let interactionTimeout = null;
+
+        // State update function
+        function updateState() {
+            // Block updates if user is interacting to prevent flickering/race conditions
+            if (isInteracting) return;
+
+            fetch('/state')
+                .then(response => response.json())
+                .then(data => {
+                    // Double check in case interaction started during fetch
+                    if (isInteracting) return;
+
+                    // Update predicted character
+                    const charElement = document.getElementById('predictedChar');
+                    if (charElement.textContent !== data.predicted_char) {
+                        charElement.style.animation = 'none';
+                        setTimeout(() => {
+                            charElement.style.animation = 'scaleIn 0.5s ease';
+                            charElement.textContent = data.predicted_char;
+                        }, 10);
+                    }
+
+                    // Update confidence
+                    const conf = Math.round(data.confidence * 100);
+                    document.getElementById('confidenceText').textContent = conf + '%';
+
+                    const circle = document.getElementById('confidenceCircle');
+                    if (circle) {
+                        const circumference = 283;
+                        const offset = circumference - (data.confidence * circumference);
+                        circle.style.strokeDashoffset = offset;
+                    }
+
+                    // Update top predictions
+                    const topPredContainer = document.getElementById('topPredictions');
+                    if (data.top_predictions && data.top_predictions.length > 0) {
+                        topPredContainer.innerHTML = data.top_predictions.map((pred, index) => {
+                            const percentage = Math.round(pred[1] * 100);
+                            let confClass = '';
+                            if (percentage >= 80) confClass = 'conf-high';
+                            else if (percentage >= 50) confClass = 'conf-mid';
+
+                            // Enhanced UI Render
+                            let barColor = '#3b82f6'; // Default Blue
+                            if (percentage >= 80) barColor = '#10b981'; // Green
+                            else if (percentage >= 50) barColor = '#06b6d4'; // Cyan
+                            else if (percentage >= 30) barColor = '#f59e0b'; // Amber
+
+                            return `
+                            <div class="prediction-item">
+                                <div class="pred-rank">${index + 1}</div>
+                                <div class="pred-content">
+                                    <div class="pred-header">
+                                        <span class="pred-char">${pred[0]}</span>
+                                        <span class="pred-percent" style="color: ${barColor}">${percentage}%</span>
+                                    </div>
+                                    <div class="pred-bar-bg">
+                                        <div class="pred-bar-fill" style="width: ${percentage}%; background: ${barColor};"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `}).join('');
+                    } else {
+                        topPredContainer.innerHTML = '<div class="empty-state">Waiting for predictions...</div>';
+                    }
+
+                    // Update suggestions
+                    const suggestionsContainer = document.getElementById('suggestions');
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        suggestionsContainer.innerHTML = data.suggestions.map(word =>
+                            `<button class="suggestion-badge" onclick="selectSuggestion('${word}')">${word}</button>`
+                        ).join('');
+                    } else {
+                        suggestionsContainer.innerHTML = '<div class="empty-state">No suggestions yet</div>';
+                    }
+
+                    // Update buffer
+                    document.getElementById('buffer').textContent = data.current_buffer || '-';
+
+                    // Update sentence
+                    // Update sentence
+                    const sentenceElem = document.getElementById('sentence');
+
+                    // ---------------- LEARNING MODE LOGIC ----------------
+                    if (window.isLearningMode) {
+                        checkLearningAnswer(data.predicted_char);
+                    }
+                    // -----------------------------------------------------
+
+                    if (sentenceElem.textContent !== data.sentence) {
+                        sentenceElem.textContent = data.sentence;
+                        translateText();
+                    }
+
+                    // Update FPS
+                    if (data.fps) {
+                        document.getElementById('fpsCounter').textContent = `FPS: ${data.fps}`;
+                    }
+
+                    // Handle Smart Actions
+                    if (data.action) {
+                        handleAction(data.action);
+                    }
+                })
+                .catch(error => console.error('Error updating state:', error));
+        }
+
+        // ... (handleAction, speakText, etc. remain same) ...
+
+        function setInteractionState() {
+            isInteracting = true;
+            if (interactionTimeout) clearTimeout(interactionTimeout);
+
+            // Auto-release lock after 500ms safety valve
+            interactionTimeout = setTimeout(() => {
+                isInteracting = false;
+            }, 500);
+        }
+
+        function handleAction(action) {
+            const overlay = document.getElementById('actionOverlay');
+            const icon = document.getElementById('actionIcon');
+            const text = document.getElementById('actionText');
+
+            let message = "";
+            let iconClass = "";
+
+            if (action === "TIME") {
+                const now = new Date();
+                message = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                iconClass = "fas fa-clock";
+                speakText(`The time is ${message}`);
+            }
+            else if (action === "DATE") {
+                const now = new Date();
+                message = now.toLocaleDateString();
+                iconClass = "fas fa-calendar-alt";
+                speakText(`Today is ${message}`);
+            }
+            else if (action === "THEME") {
+                message = "THEME SWITCHED";
+                iconClass = "fas fa-adjust";
+                document.body.classList.toggle('light-mode');
+                speakText("Theme toggled");
+            }
+
+            // Show Overlay
+            text.innerText = message;
+            icon.className = `action-icon ${iconClass}`;
+            overlay.classList.add('active');
+
+            // Hide after 2 seconds
+            setTimeout(() => {
+                overlay.classList.remove('active');
+            }, 2000);
+        }
+
+        function speakText(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function speakTranslation() {
+            const text = document.getElementById('translationDisplay').innerText;
+            if (!text || text === "Select language to translate...") return;
+
+            const lang = document.getElementById('languageSelect').value;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang; // Set the language
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Control functions
+        function speak() {
+            fetch('/speak')
+                .then(response => response.json())
+                .catch(error => console.error('Error speaking:', error));
+        }
+
+        function addSpace() {
+            fetch('/space')
+                .then(response => response.json())
+                .then(() => updateState())
+                .catch(error => console.error('Error adding space:', error));
+        }
+
+        function clearSentence() {
+            fetch('/clear')
+                .then(response => response.json())
+                .then(() => updateState())
+                .catch(error => console.error('Error clearing sentence:', error));
+        }
+
+        function backspace() {
+            fetch('/backspace')
+                .then(response => response.json())
+                .then(() => updateState())
+                .catch(error => console.error('Error backspacing:', error));
+        }
+
+        function selectSuggestion(word) {
+            // OPTIMISTIC UI UPDATE
+            setInteractionState(); // Pause server updates
+
+            // 1. Update Sentence immediately
+            const sentenceElem = document.getElementById('sentence');
+            // Remove placeholder/buffer if present or just append
+            // We assume backend appends space, so we do too
+            sentenceElem.textContent += word + " ";
+
+            // 2. Clear Suggestions immediately
+            const suggestionsContainer = document.getElementById('suggestions');
+            suggestionsContainer.innerHTML = '<div class="empty-state">No suggestions yet</div>';
+
+            // 3. Clear Buffer display
+            document.getElementById('buffer').textContent = "-";
+
+            // 4. Trigger Translation immediately
+            translateText();
+
+            // Send to server in background
+            fetch(`/select/${word}`)
+                .then(response => response.json())
+                .then(() => {
+                    // Update state one last time to sync correct format
+                    setTimeout(() => {
+                        isInteracting = false;
+                        updateState();
+                    }, 50);
+                })
+                .catch(error => {
+                    console.error('Error selecting suggestion:', error);
+                    isInteracting = false; // Release lock on error
+                });
+        }
+
+        function stopCamera() {
+            fetch('/stop_camera')
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById('videoFeed').src = "";
+                    document.getElementById('cameraPlaceholder').style.display = "flex";
+                });
+        }
+
+        function startCamera() {
+            fetch('/start_camera')
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById('cameraPlaceholder').style.display = "none";
+                    // Add timestamp to prevent caching
+                    document.getElementById('videoFeed').src = "/video_feed?" + new Date().getTime();
+                });
+        }
+
+        let lastSourceText = "";
+        let lastTargetLang = "";
+
+        function translateText() {
+            const text = document.getElementById('sentence').textContent.trim();
+            const lang = document.getElementById('languageSelect').value;
+
+            if (!text) {
+                document.getElementById('translationDisplay').textContent = "";
+                return;
+            }
+
+            // Simple cache check
+            if (text === lastSourceText && lang === lastTargetLang) return;
+
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, target: lang })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.translated_text !== undefined) {
+                        document.getElementById('translationDisplay').textContent = data.translated_text;
+                        lastSourceText = text;
+                        lastTargetLang = lang;
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Update state every 200ms
+        setInterval(updateState, 200);
+
+
+        // ================= NAVIGATION LOGIC =================
+        function switchMode(mode) {
+            const btnSign = document.getElementById('btn-sign');
+            const btnSpeak = document.getElementById('btn-speak');
+            const sliderBg = document.getElementById('navSliderBg');
+            const containerSign = document.getElementById('mode-sign');
+            const containerSpeak = document.getElementById('mode-speak');
+
+            if (mode === 'sign') {
+                btnSign.classList.add('active');
+                btnSpeak.classList.remove('active');
+                sliderBg.style.transform = 'translateX(0px)';
+                sliderBg.style.width = btnSign.offsetWidth + 'px';
+
+                containerSign.classList.add('active');
+                containerSpeak.classList.remove('active');
+                containerSign.style.display = 'grid'; // Restore grid layout
+                containerSpeak.style.display = 'none';
+
+                startCamera(); // Ensure camera is active
+            } else {
+                btnSpeak.classList.add('active');
+                btnSign.classList.remove('active');
+                sliderBg.style.transform = `translateX(${btnSign.offsetWidth}px)`;
+                sliderBg.style.width = btnSpeak.offsetWidth + 'px';
+
+                containerSpeak.classList.add('active');
+                containerSign.classList.remove('active');
+                containerSpeak.style.display = 'flex';
+                containerSign.style.display = 'none';
+
+                stopCamera(); // optimize performance
+            }
+        }
+
+        // Initialize Slider
+        window.onload = function () {
+            // Set initial slider width
+            const btnSign = document.getElementById('btn-sign');
+            const sliderBg = document.getElementById('navSliderBg');
+            if (btnSign && sliderBg) {
+                sliderBg.style.width = btnSign.offsetWidth + 'px';
+            }
+        }
+
+        // ================= SPEECH TO SIGN LOGIC =================
+
+        let recognition = null;
+
+        function startSpeechToSign() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Speech recognition is not supported in this browser. Please use Chrome.");
+                return;
+            }
+
+            // UI Elements
+            const status = document.getElementById('isl-status');
+            const wordDisplay = document.getElementById('isl-word-display');
+            const gifDisplay = document.getElementById('isl-gif-display');
+            const gifPlaceholder = document.getElementById('gif-placeholder');
+            const startBtn = document.getElementById('start-speak-btn');
+
+            status.innerText = "Listening...";
+            status.style.color = "#06b6d4";
+            wordDisplay.innerText = "";
+
+            // Visual feedback on button
+            startBtn.classList.add('pulse-animation'); // Add a pulse effect if defined, or just use text
+            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Listening...';
+
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function (event) {
+                const text = event.results[0][0].transcript;
+                console.log("Recognized: ", text);
+                status.innerText = "Processing: " + text;
+                wordDisplay.innerText = text; // Show recognized text immediately
+
+                // Fetch GIFs from backend
+                fetch('/process_speech', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        playGifSequence(data.sequence);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        status.innerText = "Error processing request.";
+                        resetListenButton();
+                    });
+            };
+
+            recognition.onerror = function (event) {
+                console.error("Speech recognition error", event.error);
+                status.innerText = "Error: " + event.error;
+                resetListenButton();
+            };
+
+            recognition.onend = function () {
+                if (status.innerText === "Listening...") {
+                    resetListenButton(); // Reset if nothing happened
+                }
+            };
+
+            recognition.start();
+        }
+
+        function resetListenButton() {
+            const startBtn = document.getElementById('start-speak-btn');
+            startBtn.innerHTML = '<i class="fas fa-microphone fa-lg"></i> Tap to Speak';
+        }
+
+        function closeISLOverlay() {
+            // Deprecated - we just switch modes now. But keeping for safety if referenced elsewhere.
+            switchMode('sign');
+        }
+
+        async function playGifSequence(sequence) {
+            const gifDisplay = document.getElementById('isl-gif-display');
+            const wordDisplay = document.getElementById('isl-word-display');
+            const statusDisplay = document.getElementById('isl-status');
+            const placeholder = document.getElementById('gif-placeholder');
+
+            statusDisplay.innerText = "Playing Sign Language...";
+            if (placeholder) placeholder.style.display = 'none';
+
+
+            for (const item of sequence) {
+                wordDisplay.innerText = item.word;
+
+                if (item.type === 'gif') {
+                    gifDisplay.src = item.src;
+                    gifDisplay.style.display = 'block';
+                } else {
+                    // Text only fallback (if GIF not found)
+                    gifDisplay.style.display = 'none';
+                }
+
+                // Duration: 2000ms per word
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
+            statusDisplay.innerText = "Finished";
+            resetListenButton();
+
+            // Optional: return to placeholder after delay
+            // setTimeout(() => {
+            //     gifDisplay.style.display = 'none';
+            //     if(placeholder) placeholder.style.display = 'block';
+            // }, 3000);
+        }
+
+        // ================= LEARNING MODE START =================
+        window.isLearningMode = false;
+        let learningScore = 0;
+        let currentTarget = "A";
+        let lastMatchTime = 0;
+
+        // Stats
+        let statsAttempts = 0;
+        let statsCorrect = 0;
+        let scoreHistory = [0];
+        let accuracyChart = null;
+        let progressChart = null;
+
+        function toggleLearningMode() {
+            window.isLearningMode = !window.isLearningMode;
+            const signModeContainer = document.getElementById("mode-sign");
+            const learnPanel = document.getElementById("learning-panel");
+            const btnText = window.isLearningMode ? "Stop Practice" : "Practice Mode";
+
+            // Update button text
+            const btn = document.querySelector('.btn-learn');
+            if (btn) btn.innerHTML = `<i class="fas fa-graduation-cap"></i> ${btnText}`;
+
+            if (window.isLearningMode) {
+                // Force switch to 'sign' mode first if not active
+                if (signModeContainer && !signModeContainer.classList.contains('active')) {
+                    if (typeof switchMode === 'function') switchMode('sign');
+                }
+
+                if (signModeContainer) signModeContainer.classList.add('d-none'); // Hide the grid/video UI
+                learnPanel.style.display = "flex";
+
+                // Reset game
+                learningScore = 0;
+                statsAttempts = 0;
+                statsCorrect = 0;
+                scoreHistory = [0];
+                updateScore();
+                nextChallenge();
+
+                // Init Charts with delay to ensure visibility
+                setTimeout(initCharts, 100);
+            } else {
+                if (signModeContainer) signModeContainer.classList.remove('d-none'); // Restore grid
+                learnPanel.style.display = "none";
+            }
+        }
+
+        function nextChallenge() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            currentTarget = chars[Math.floor(Math.random() * chars.length)];
+            const targetEl = document.getElementById("target-letter");
+            if (targetEl) targetEl.innerText = currentTarget;
+
+            const feedback = document.getElementById("feedback-msg");
+            if (feedback) feedback.innerText = "";
+
+            const card = document.querySelector(".target-card");
+            if (card) card.style.borderColor = "rgba(255,255,255,0.2)";
+        }
+
+        function updateScore() {
+            const scoreEl = document.getElementById("score-display");
+            if (scoreEl) scoreEl.innerText = learningScore;
+        }
+
+        function checkLearningAnswer(predictedChar) {
+            if (!predictedChar) return;
+
+            if (predictedChar === currentTarget) {
+                const now = Date.now();
+                if (now - lastMatchTime > 100) { // dragging/holding
+                    const card = document.querySelector(".target-card");
+                    if (card) card.style.borderColor = "#4ade80";
+
+                    if (!window.justScored) {
+                        triggerWin();
+                    }
+                }
+                lastMatchTime = now;
+            } else {
+                const card = document.querySelector(".target-card");
+                if (card) card.style.borderColor = "rgba(255,255,255,0.2)";
+            }
+        }
+
+        window.justScored = false;
+        function triggerWin() {
+            window.justScored = true;
+            learningScore += 10;
+            statsCorrect++;
+            statsAttempts++;
+            scoreHistory.push(learningScore);
+
+            updateScore();
+            updateCharts(); // Update visual stats
+
+            const feedback = document.getElementById("feedback-msg");
+            if (feedback) {
+                feedback.innerText = "Correct! 🎉";
+                feedback.style.color = "#4ade80";
+            }
+
+            setTimeout(() => {
+                nextChallenge();
+                window.justScored = false;
+            }, 1500);
+        }
+
+        // CHARTS LOGIC
+        function initCharts() {
+            const ctxAcc = document.getElementById('accuracyChart').getContext('2d');
+            const ctxProg = document.getElementById('progressChart').getContext('2d');
+
+            // Destroy existing if any
+            if (accuracyChart) accuracyChart.destroy();
+            if (progressChart) progressChart.destroy();
+
+            // Accuracy Doughnut
+            accuracyChart = new Chart(ctxAcc, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Correct', 'Remaining'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#10b981', 'rgba(255, 255, 255, 0.1)'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
+                }
+            });
+
+            // Progress Line
+            progressChart = new Chart(ctxProg, {
+                type: 'line',
+                data: {
+                    labels: ['Start'],
+                    datasets: [{
+                        label: 'Score',
+                        data: [0],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!accuracyChart || !progressChart) return;
+
+            // Update Accuracy
+            const accuracy = statsAttempts === 0 ? 0 : Math.round((statsCorrect / statsAttempts) * 100);
+            accuracyChart.data.datasets[0].data = [accuracy, 100 - accuracy];
+            accuracyChart.update();
+
+            // Update Progress
+            progressChart.data.labels.push(statsAttempts);
+            progressChart.data.datasets[0].data.push(learningScore);
+            progressChart.update();
+        }
+        // ================= LEARNING MODE END =================
+
+        // Initial state update
+        updateState();
+    </script>
+</body>
+
+</html>
